@@ -1,0 +1,125 @@
+#!/bin/bash
+nodos=$(kubectl get nodes -o wide | grep -v control-plane | grep -v NAME |cut -d' ' -f1)
+selnode=''
+counter=0
+load=9999999
+verbosity=0
+apply=0
+purposedyaml=0
+
+function getPrefNode(){
+for nodo in $nodos
+do
+	cval=$(ssh -i /root/kubenodes root@$nodo $(cat /usr/bin/cpuwatcher.sh))
+	#valor de CPU no normalizado son 100 por core por lo tanto hay que normalizarlo
+	cval=$(echo $cval / 4 | bc)
+	mval=$(ssh -i /root/kubenodes root@$nodo $(cat /usr/bin/memwatcher.sh))
+	tdp=$(kubectl get nodes -name $nodo -o json | grep tdp | cut -d':' -f2|tr -d ','|tr -d '"')
+	capex=$(kubectl get nodes -name $nodo -o json | grep capex | cut -d':' -f2|tr -d ','|tr -d '"')
+	numer=$(echo $cval*$tdp*$capex+$mval*$tdp*$capex | bc)
+        #distributiva para la suma (P+R)*Capex*TDP	
+	#si la ocupación de CPU o RAM está por encima del 80% escalo el coste 100 veces para evitar la elección del nodo
+	if [ $(echo $cval | cut -d'.' -f1) -gt 85 ] ;then
+		numer=$(echo $numer * 100 | bc)
+	fi
+	if [ $(echo $mval | cut -d'.' -f1) -gt 85 ] ;then
+		numer=$(echo $numer * 100 | bc)
+	fi
+	if [ $verbosity -eq 1 ];then
+		echo $nodo $cval $mval $tdp $capex $(echo $numer | cut -d'.' -f1)
+	fi
+	if [ $(echo $numer | cut -d'.' -f1) -le $(echo $load | cut -d'.' -f1) ];then
+		if [ $verbosity -eq 1 ];then
+			echo cambio de nodo desde $selnode a $nodo
+		fi
+		load=$numer
+		selnode=$nodo
+	fi
+done
+}
+
+function replaceyaml(){
+	lineacontainers=$(grep -n -i containers $1 | cut -d':' -f1)
+	identacionnespacios=$(grep -i containers $1 | cut -d'c' -f1 |wc -m) 
+        head -$(expr $lineacontainers - 1) $1 > /tmp/temp$1
+	echo $identacionnespacios
+	for (( i=1;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "affinity:" >> /tmp/temp$1
+	for (( i=-1;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "nodeAffinity:" >> /tmp/temp$1
+	for (( i=-3;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "requiredDuringSchedulingIgnoredDuringExecution:" >> /tmp/temp$1
+	for (( i=-5;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "nodeSelectorTerms:" >> /tmp/temp$1
+	for (( i=-5;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "- matchExpressions:" >> /tmp/temp$1
+	for (( i=-7;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "- key: nombre" >> /tmp/temp$1
+	for (( i=-9;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "operator: In" >> /tmp/temp$1
+	for (( i=-9;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	echo "values:" >> /tmp/temp$1
+	for (( i=-9;i<identacionnespacios;i++  ))
+	do
+		echo -n ' ' >>/tmp/temp$1
+	done
+	getPrefNode
+	echo "- "$selnode >> /tmp/temp$1
+	totlineas=$(wc -l $1 | cut -d' ' -f1)
+	ultimaslineas=$(echo $totlineas - $lineacontainers + 1 | bc)
+	tail -n $ultimaslineas $1 >> /tmp/temp$1
+}
+
+for param in $@
+do
+	if [[ "$param" == "apply" ]]; then
+		apply=1
+	fi
+	if [[ "$param" == "-v="* ]]; then
+		verbosity=1
+	fi
+	if [[ "$param" == *".yaml" ]]; then
+		if egrep -isq "nodeSelector|nodeAffinity|nodename" $param;then
+			echo -n
+		else
+			purposedyaml=1
+		fi
+	fi
+	if [ $apply -eq 1 ] && [ $purposedyaml -eq 1 ];then
+		replaceyaml $param
+		kubectl apply -f /tmp/temp$param
+	fi
+done
+
+if [ $apply -eq 0 ] || [ $purposedyaml -eq 0 ];then
+	echo salida normal
+	kubectl "$@"
+	exit 0
+fi
+
+
+#kubectl "$@"
