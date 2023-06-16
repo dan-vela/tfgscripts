@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcatarm
+  labels:
+    app: web
+spec:
+  selector:
+    matchLabels:
+      run: tomcatarm
+  replicas: 10
+  template:
+    metadata:
+      labels:
+        run: tomcatarm
+    spec:
+      containers:
+        - name: tomcat
+          image: tomcat:latest
+      nodeName: gdtech-02

@@ -27,7 +27,7 @@ do
 		numer=$(echo $numer * 100 | bc)
 	fi
 	if [ $verbosity -eq 1 ];then
-		echo "NAME CPU RAM TDP VALUE"
+		echo "NAME CPU MEM TDP VALUE"
 		echo $nodo $cval $mval $tdp $capex $(echo $numer | cut -d'.' -f1)
 	fi
 	if [ $(echo $numer | cut -d'.' -f1) -le $(echo $load | cut -d'.' -f1) ];then
@@ -113,13 +113,13 @@ do
 	fi
 	if [ $apply -eq 1 ] && [ $purposedyaml -eq 1 ];then
 		replaceyaml $param
-		kubectl apply -f /tmp/temp$param
+		kubectl --dry-run=client apply -f /tmp/temp$param
 	fi
 done
 
 if [ $apply -eq 0 ] || [ $purposedyaml -eq 0 ];then
 	echo salida normal
-	kubectl "$@"
+	kubectl --dry-run=client "$@"
 	exit 0
 fi
 

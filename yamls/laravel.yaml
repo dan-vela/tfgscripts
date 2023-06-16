@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laravel
+  labels:
+    app: web
+spec:
+  selector:
+    matchLabels:
+      run: laravel
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        run: laravel
+    spec:
+      containers:
+        - name: laravel
+          image: bitnami/laravel:latest
+          env:
+          ports:
+            - containerPort: 8080
+      nodeName: gdtech-02

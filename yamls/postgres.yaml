@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pg
+  labels:
+    app: web
+spec:
+  selector:
+    matchLabels:
+      run: pg
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        run: pg
+    spec:
+      containers:
+        - name: pg
+          image: postgres:latest
+          env:
+            - name: POSTGRES_PASSWORD
+              value: root
+          ports:
+            - containerPort: 3306

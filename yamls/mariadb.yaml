@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  labels:
+    app: web
+spec:
+  selector:
+    matchLabels:
+      run: mariadb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: bitnami/mariadb:latest
+          env:
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "true"
+            - name: MARIADB_USER
+              value: bn_wordpress
+            - name: MARIADB_PASSWORD
+              value: bitnami
+            - name: MARIADB_DATABASE
+              value: bitnami_wordpress
+          ports:
+            - containerPort: 3306

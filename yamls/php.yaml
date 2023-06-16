@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: phppod
+  labels:
+    app: web
+spec:
+  containers:
+    - name: php
+      image: php:5.6-cli
+      ports:
+        - containerPort: 80
+  nodeSelector:
+    nodegroup-type: X64

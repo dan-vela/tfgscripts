@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: laravel64
+  labels:
+    app: web
+spec:
+  selector:
+    matchLabels:
+      run: laravel64
+  replicas: 0
+  template:
+    metadata:
+      labels:
+        run: laravel64
+    spec:
+      containers:
+        - name: laravel64
+          image: bitnami/laravel:latest
+          env:
+          ports:
+            - containerPort: 8080
+      nodeName: kbnodex64 
